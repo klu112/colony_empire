@@ -1,16 +1,20 @@
-# colony_empire
+# Colony Empire
 
-A new Flutter project.
+Ein Ameisen-Aufbau-Simulationsspiel entwickelt mit Flutter.
 
-## Getting Started
+## Beschreibung
 
-This project is a starting point for a Flutter application.
+Colony Empire ist eine Aufbau-Simulation, in der Spieler eine Ameisenkolonie von einer einzelnen Königin bis zu einer florierenden Zivilisation aufbauen. Wähle zwischen vier einzigartigen Ameisenarten, jede mit speziellen Fähigkeiten.
 
-A few resources to get you started if this is your first Flutter project:
+## Entwicklungseinrichtung
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+1. Stelle sicher, dass Flutter installiert ist:
+2. Abhängigkeiten installieren:
+3. App ausführen:
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Features
+
+- Verschiedene Ameisenarten mit einzigartigen Fähigkeiten
+- Modularer Nestbau mit verschiedenen Kammern
+- Ressourcenmanagement und Aufgabenzuweisung
+- Dynamisches Ökosystem mit Events und Herausforderungen
