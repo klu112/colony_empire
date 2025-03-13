@@ -21,8 +21,17 @@ class SpeciesSelectionScreen extends StatefulWidget {
 
 class _SpeciesSelectionScreenState extends State<SpeciesSelectionScreen> {
   bool _hasSavedGame = false;
-
   String? selectedSpeciesId;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Prüfe, ob ein Spielstand vorhanden ist
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForSavedGame();
+    });
+  }
 
   void _handleSpeciesSelect(Species species) {
     setState(() {
@@ -38,6 +47,46 @@ class _SpeciesSelectionScreenState extends State<SpeciesSelectionScreen> {
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const TutorialScreen()),
+      );
+    }
+  }
+
+  Future<void> _checkForSavedGame() async {
+    final servicesProvider = Provider.of<ServicesProvider>(
+      context,
+      listen: false,
+    );
+
+    // Stelle sicher, dass Services initialisiert sind
+    if (!servicesProvider.initialized) {
+      servicesProvider.initialize(context);
+    }
+
+    final hasSave = await servicesProvider.persistenceService.hasSavedGame();
+    // Aktualisiere UI-Zustand, falls ein Spielstand vorhanden ist
+    setState(() {
+      _hasSavedGame = hasSave;
+    });
+  }
+
+  Future<void> _loadGame() async {
+    final servicesProvider = Provider.of<ServicesProvider>(
+      context,
+      listen: false,
+    );
+    final success = await servicesProvider.persistenceService.loadGame();
+
+    if (success) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const GameScreen()),
+      );
+    } else {
+      // Zeige Fehlermeldung
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Fehler beim Laden des Spielstands'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -90,63 +139,45 @@ class _SpeciesSelectionScreenState extends State<SpeciesSelectionScreen> {
                   ),
                 ],
                 const SizedBox(height: AppDimensions.m),
-
-                // Rest der build-Methode bleibt unverändert...
+                Expanded(
+                  child: GridView.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: AppDimensions.m,
+                          mainAxisSpacing: AppDimensions.m,
+                          childAspectRatio: 0.8,
+                        ),
+                    itemCount: SpeciesData.all.length,
+                    itemBuilder: (context, index) {
+                      final species = SpeciesData.all[index];
+                      return SpeciesCardWidget(
+                        species: species,
+                        isSelected: selectedSpeciesId == species.id,
+                        onTap: () => _handleSpeciesSelect(species),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: AppDimensions.l),
+                ElevatedButton(
+                  onPressed: selectedSpeciesId != null ? _startGame : null,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppDimensions.m,
+                    ),
+                    disabledBackgroundColor: Colors.grey.shade300,
+                  ),
+                  child: const Text(
+                    'Kolonie gründen',
+                    style: TextStyle(fontSize: 18),
+                  ),
+                ),
               ],
             ),
           ),
         ),
       ),
     );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-
-    // Prüfe, ob ein Spielstand vorhanden ist
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkForSavedGame();
-    });
-  }
-
-  Future<void> _checkForSavedGame() async {
-    final servicesProvider = Provider.of<ServicesProvider>(
-      context,
-      listen: false,
-    );
-
-    // Stelle sicher, dass Services initialisiert sind
-    if (!servicesProvider.initialized) {
-      servicesProvider.initialize(context);
-    }
-
-    final hasSave = await servicesProvider.persistenceService.hasSavedGame();
-    // Aktualisiere UI-Zustand, falls ein Spielstand vorhanden ist
-    setState(() {
-      _hasSavedGame = hasSave;
-    });
-  }
-
-  Future<void> _loadGame() async {
-    final servicesProvider = Provider.of<ServicesProvider>(
-      context,
-      listen: false,
-    );
-    final success = await servicesProvider.persistenceService.loadGame();
-
-    if (success) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const GameScreen()),
-      );
-    } else {
-      // Zeige Fehlermeldung
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Fehler beim Laden des Spielstands'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
   }
 }

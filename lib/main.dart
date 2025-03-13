@@ -35,16 +35,11 @@ class MyApp extends StatelessWidget {
           scaffoldBackgroundColor: AppColors.background,
           textTheme: const TextTheme(
             displayLarge: TextStyle(
-              fontFamily: 'GameFont',
               fontSize: 32,
               fontWeight: FontWeight.bold,
               color: AppColors.textPrimary,
             ),
-            bodyLarge: TextStyle(
-              fontFamily: 'GameFont',
-              fontSize: 16,
-              color: AppColors.textPrimary,
-            ),
+            bodyLarge: TextStyle(fontSize: 16, color: AppColors.textPrimary),
             // Weitere TextStyles hier...
           ),
           cardTheme: CardTheme(
