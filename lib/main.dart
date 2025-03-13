@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/game_provider.dart';
+import 'providers/services_provider.dart';
 import 'screens/species_selection.dart';
 import 'utils/constants/colors.dart';
 
@@ -16,6 +17,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => GameProvider()),
+        ChangeNotifierProvider(create: (_) => ServicesProvider()),
       ],
       child: MaterialApp(
         title: 'Colony Empire',
@@ -57,10 +59,7 @@ class MyApp extends StatelessWidget {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.textLight,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 12,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -71,9 +70,7 @@ class MyApp extends StatelessWidget {
             inactiveTrackColor: AppColors.divider,
             thumbColor: AppColors.primary,
             trackHeight: 4,
-            thumbShape: const RoundSliderThumbShape(
-              enabledThumbRadius: 8,
-            ),
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
           ),
         ),
         home: const SpeciesSelectionScreen(),
