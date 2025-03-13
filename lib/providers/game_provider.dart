@@ -7,13 +7,16 @@ import '../models/chamber/tunnel_model.dart';
 import '../models/colony_model.dart';
 import '../models/resources/resources_model.dart';
 import '../models/resources/task_allocation_model.dart';
+import '../services/events/event_service.dart';
+import '../utils/constants/game_enums.dart';
 import '../utils/constants/species_data.dart';
-// Importiere math für Random
-import 'dart:math' as math;
 
 class GameProvider with ChangeNotifier {
-  // Spielzustände: selection, tutorial, playing, paused
-  String _gameState = 'selection';
+  // Services
+  final EventService _eventService = EventService();
+
+  // Spielzustände
+  GameState _gameState = GameState.selection;
   String? _selectedSpeciesId;
 
   // Kolonie-Daten
@@ -24,7 +27,7 @@ class GameProvider with ChangeNotifier {
   String? _notification;
 
   // Getter
-  String get gameState => _gameState;
+  GameState get gameState => _gameState;
   String? get selectedSpeciesId => _selectedSpeciesId;
   Colony get colony => _colony;
   Resources get resources => _colony.resources;
@@ -38,8 +41,14 @@ class GameProvider with ChangeNotifier {
   String? get notification => _notification;
 
   // Setter
-  void setGameState(String newState) {
+  void setGameState(GameState newState) {
     _gameState = newState;
+    notifyListeners();
+  }
+
+  // Für Kompatibilität mit bisherigem Code
+  void setGameStateFromString(String stateString) {
+    _gameState = GameStateExtension.fromString(stateString);
     notifyListeners();
   }
 
@@ -160,8 +169,8 @@ class GameProvider with ChangeNotifier {
       type: type,
       size: 1,
       position: Point(
-        150 + (math.Random().nextDouble() * 100 - 50),
-        150 + (math.Random().nextDouble() * 100 - 50),
+        150 + (Random().nextDouble() * 100 - 50),
+        150 + (Random().nextDouble() * 100 - 50),
       ),
     );
 
@@ -194,7 +203,7 @@ class GameProvider with ChangeNotifier {
 
   // Ressourcen aktualisieren basierend auf Aufgabenverteilung
   void updateResources() {
-    // Diese Logik wird später detaillierter im GameLoop implementiert
+    // Spezies-Bonus ermitteln
     final foodBonus = _selectedSpeciesId == 'atta' ? 1.5 : 1.0;
     final foodChange = taskAllocation.foraging / 25 * foodBonus;
     final materialChange = taskAllocation.building / 40;
@@ -206,14 +215,12 @@ class GameProvider with ChangeNotifier {
     // Alle 10 Ticks Chance auf Eierschlupf basierend auf Brutpflege
     if (time % 10 == 0) {
       final hatchChance = taskAllocation.caregiving / 100;
-      if (math.Random().nextDouble() < hatchChance &&
-          newPopulation['eggs']! > 0) {
+      if (Random().nextDouble() < hatchChance && newPopulation['eggs']! > 0) {
         newPopulation['eggs'] = newPopulation['eggs']! - 1;
         newPopulation['larvae'] = newPopulation['larvae']! + 1;
       }
 
-      if (math.Random().nextDouble() < hatchChance &&
-          newPopulation['larvae']! > 0) {
+      if (Random().nextDouble() < hatchChance && newPopulation['larvae']! > 0) {
         newPopulation['larvae'] = newPopulation['larvae']! - 1;
         newPopulation['workers'] = newPopulation['workers']! + 1;
       }
@@ -247,9 +254,8 @@ class GameProvider with ChangeNotifier {
 
   // Ameisen bewegen
   void updateAnts() {
-    // Diese Logik wird später detaillierter im GameLoop implementiert
-    if (ants.isEmpty && _gameState == 'playing') {
-      // Initialisiere Ameisen, wenn noch keine vorhanden sind
+    // Initialisiere Ameisen, wenn noch keine vorhanden sind
+    if (ants.isEmpty && _gameState == GameState.playing) {
       _initializeAnts();
       return;
     }
@@ -266,11 +272,11 @@ class GameProvider with ChangeNotifier {
       // Bewegung berechnen
       final dx = ant.target.x - ant.position.x;
       final dy = ant.target.y - ant.position.y;
-      final distance = math.sqrt(dx * dx + dy * dy);
+      final distance = sqrt(dx * dx + dy * dy);
 
       if (distance < 2) {
         // Ziel erreicht, neues Ziel setzen
-        final targetChamber = chambers[math.Random().nextInt(chambers.length)];
+        final targetChamber = chambers[Random().nextInt(chambers.length)];
         updatedAnts.add(
           ant.copyWith(
             target: targetChamber.position,
@@ -312,7 +318,7 @@ class GameProvider with ChangeNotifier {
 
     // Initialen Arbeiterinnen hinzufügen
     for (int i = 0; i < resources.population['workers']!; i++) {
-      final targetChamber = chambers[math.Random().nextInt(chambers.length)];
+      final targetChamber = chambers[Random().nextInt(chambers.length)];
       final taskList = [
         'foraging',
         'building',
@@ -320,7 +326,7 @@ class GameProvider with ChangeNotifier {
         'defense',
         'exploration',
       ];
-      final randomTask = taskList[math.Random().nextInt(taskList.length)];
+      final randomTask = taskList[Random().nextInt(taskList.length)];
 
       initialAnts.add(
         Ant(
@@ -329,7 +335,7 @@ class GameProvider with ChangeNotifier {
           position: chambers[0].position,
           target: targetChamber.position,
           task: randomTask,
-          chamberID: math.Random().nextInt(chambers.length) + 1,
+          chamberID: Random().nextInt(chambers.length) + 1,
         ),
       );
     }
@@ -338,59 +344,29 @@ class GameProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Zufallsereignis auslösen
+  // Zufallsereignis auslösen mit EventService
   void triggerRandomEvent() {
-    final events = [
-      {
-        'message': 'Ein feindliches Insekt nähert sich dem Nest!',
-        'effect': () {
-          if (taskAllocation.defense < 10) {
-            // Verlust einer Arbeiterin
-            final Map<String, int> newPopulation = Map<String, int>.from(
-              resources.population,
-            );
-            if (newPopulation['workers']! > 1) {
-              newPopulation['workers'] = newPopulation['workers']! - 1;
+    final randomEvent = _eventService.generateRandomEvent(
+      resources: resources,
+      taskAllocation: taskAllocation,
+      selectedSpeciesId: _selectedSpeciesId,
+    );
 
-              _colony = _colony.copyWith(
-                resources: resources.copyWith(population: newPopulation),
-              );
+    // Effekt anwenden
+    final effectResult = randomEvent.effect();
 
-              setNotification('Eine Arbeiterin wurde vom Feind getötet!');
-            }
-          } else {
-            setNotification(
-              'Deine Soldaten haben das Nest erfolgreich verteidigt!',
-            );
-          }
-        },
-      },
-      {
-        'message': 'Es hat angefangen zu regnen.',
-        'effect': () {
-          _colony = _colony.copyWith(
-            resources: resources.copyWith(
-              water: (resources.water + 20).clamp(0.0, 100.0),
-            ),
-          );
-          setNotification('Der Regen hat deine Wasservorräte aufgefüllt!');
-        },
-      },
-      {
-        'message': 'Eure Sammler haben eine große Nahrungsquelle gefunden!',
-        'effect': () {
-          _colony = _colony.copyWith(
-            resources: resources.copyWith(
-              food: (resources.food + 15).clamp(0.0, 100.0),
-            ),
-          );
-          setNotification('Deine Nahrungsvorräte wurden aufgefüllt!');
-        },
-      },
-    ];
+    // Ressourcen aktualisieren, falls vorhanden
+    if (effectResult.containsKey('resources')) {
+      _colony = _colony.copyWith(
+        resources: effectResult['resources'] as Resources,
+      );
+    }
 
-    final randomEvent = events[math.Random().nextInt(events.length)];
-    setNotification(randomEvent['message'] as String);
-    (randomEvent['effect'] as Function)();
+    // Benachrichtigung anzeigen
+    if (effectResult.containsKey('notification')) {
+      setNotification(effectResult['notification'] as String);
+    } else {
+      setNotification(randomEvent.message);
+    }
   }
 }
