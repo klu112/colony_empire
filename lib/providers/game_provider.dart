@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 class GameProvider with ChangeNotifier {
   // Basisimplementierung - wird später erweitert
   String _gameState = 'selection';
-  Map<String, dynamic> _resources = {};
+  final Map<String, dynamic> _resources = {};
   String? _selectedSpecies;
 
   // Getter
