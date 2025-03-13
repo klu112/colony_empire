@@ -381,4 +381,12 @@ class GameProvider with ChangeNotifier {
     _colony = _colony.copyWith(ants: updatedAnts);
     notifyListeners();
   }
+
+  /// Lade eine gespeicherte Kolonie
+  void loadColony(Colony savedColony) {
+    _colony = savedColony;
+    _gameState = GameState.playing;
+    _selectedSpeciesId = savedColony.selectedSpeciesId;
+    notifyListeners();
+  }
 }

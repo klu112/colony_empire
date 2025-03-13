@@ -7,6 +7,7 @@ import '../../widgets/game/game_controls_widget.dart';
 import '../../widgets/game/game_sidebar_widget.dart';
 import '../../widgets/game/nest_view_widget.dart';
 import '../../widgets/ui/notification_widget.dart';
+import '../../widgets/game/pause_menu_widget.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -16,6 +17,8 @@ class GameScreen extends StatefulWidget {
 }
 
 class _GameScreenState extends State<GameScreen> {
+  bool _isPaused = false;
+
   @override
   void initState() {
     super.initState();
@@ -33,6 +36,15 @@ class _GameScreenState extends State<GameScreen> {
       if (gameProvider.speed > 0) {
         servicesProvider.gameLoopService.startGameLoop();
       }
+
+      // Auto-Save beim Verlassen der App (für Web nicht relevant)
+      WidgetsBinding.instance.addObserver(
+        _LifecycleObserver(
+          onPause: () {
+            servicesProvider.persistenceService.saveGame();
+          },
+        ),
+      );
     });
   }
 
@@ -86,6 +98,31 @@ class _GameScreenState extends State<GameScreen> {
                               ],
                             ),
                           ),
+
+                          // Pause-Button
+                          Positioned(
+                            top: 16,
+                            right: 16,
+                            child: FloatingActionButton(
+                              mini: true,
+                              backgroundColor: Colors.white.withOpacity(0.8),
+                              foregroundColor: AppColors.primary,
+                              child: const Icon(Icons.pause),
+                              onPressed: () {
+                                setState(() {
+                                  _isPaused = true;
+                                });
+                                // Spiel pausieren
+                                final servicesProvider =
+                                    Provider.of<ServicesProvider>(
+                                      context,
+                                      listen: false,
+                                    );
+                                servicesProvider.setGameSpeed(0);
+                                gameProvider.setGameState(GameState.paused);
+                              },
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -106,6 +143,19 @@ class _GameScreenState extends State<GameScreen> {
                       onDismiss: () => gameProvider.setNotification(null),
                     ),
                   ),
+
+                // Pause-Menü
+                if (_isPaused)
+                  GestureDetector(
+                    onTap: () {}, // Verhindere Klicks durch das Menü
+                    child: PauseMenuWidget(
+                      onResume: () {
+                        setState(() {
+                          _isPaused = false;
+                        });
+                      },
+                    ),
+                  ),
               ],
             ),
           ),
@@ -122,6 +172,30 @@ class _GameScreenState extends State<GameScreen> {
       listen: false,
     );
     servicesProvider.gameLoopService.stopGameLoop();
+
+    // Speichere Spielstand beim Verlassen
+    servicesProvider.persistenceService.saveGame();
+
+    // Bereinige Lifecycle Observer
+    WidgetsBinding.instance.removeObserver(_lifecycleObserver);
+
     super.dispose();
+  }
+}
+
+/// Hilfklasse zum Beobachten des App-Lifecycle-Status
+class _LifecycleObserver extends WidgetsBindingObserver {
+  final VoidCallback? onPause;
+  final VoidCallback? onResume;
+
+  _LifecycleObserver({this.onPause, this.onResume});
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused && onPause != null) {
+      onPause!();
+    } else if (state == AppLifecycleState.resumed && onResume != null) {
+      onResume!();
+    }
   }
 }
