@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/game_provider.dart';
+import '../utils/constants/colors.dart';
+import '../utils/constants/dimensions.dart';
+import '../utils/constants/game_enums.dart';
 import '../utils/constants/text_styles.dart';
 import '../utils/constants/tutorial_data.dart';
+import '../widgets/game/game_sidebar_widget.dart';
+import '../widgets/game/nest_view_widget.dart';
 import 'game/game_screen.dart';
 
 class TutorialScreen extends StatefulWidget {
@@ -23,7 +28,7 @@ class _TutorialScreenState extends State<TutorialScreen> {
     } else {
       // Tutorial beenden und Spiel starten
       final gameProvider = Provider.of<GameProvider>(context, listen: false);
-      gameProvider.setGameState('playing');
+      gameProvider.setGameState(GameState.playing);
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const GameScreen()),
@@ -41,27 +46,33 @@ class _TutorialScreenState extends State<TutorialScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Dies ist nur ein Platzhalter und wird später mit dem tatsächlichen Spiel-Screen ersetzt
     return Scaffold(
-      backgroundColor: Colors.black45,
       body: Stack(
         children: [
-          // Hintergrund (später Game Screen)
-          const Center(
-            child: Text(
-              'Hier wird später der Spielbildschirm angezeigt',
-              style: TextStyle(color: Colors.white),
+          // Hintergrund (Game Screen)
+          SafeArea(
+            child: Row(
+              children: const [
+                // Nestansicht
+                Expanded(child: NestViewWidget()),
+
+                // Seitenleiste
+                GameSidebarWidget(),
+              ],
             ),
           ),
+
+          // Abgedunkelter Hintergrund
+          Container(color: Colors.black.withOpacity(0.7)),
 
           // Tutorial-Dialog
           Center(
             child: Container(
-              width: MediaQuery.of(context).size.width * 0.8,
-              padding: const EdgeInsets.all(24),
+              width: MediaQuery.of(context).size.width * 0.5,
+              padding: const EdgeInsets.all(AppDimensions.l),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.3),
@@ -78,29 +89,33 @@ class _TutorialScreenState extends State<TutorialScreen> {
                     style: AppTextStyles.heading2,
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppDimensions.m),
                   Text(
                     TutorialData.steps[_currentStep]['content']!,
                     style: AppTextStyles.bodyLarge,
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: AppDimensions.l),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       if (_currentStep > 0)
-                        ElevatedButton(
+                        TextButton(
                           onPressed: _previousStep,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey.shade300,
-                            foregroundColor: Colors.black87,
-                          ),
                           child: const Text('Zurück'),
                         )
                       else
                         const SizedBox(),
                       ElevatedButton(
                         onPressed: _nextStep,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppDimensions.l,
+                            vertical: AppDimensions.m,
+                          ),
+                        ),
                         child: Text(
                           _currentStep < TutorialData.steps.length - 1
                               ? 'Weiter'

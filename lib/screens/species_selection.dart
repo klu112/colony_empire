@@ -4,6 +4,7 @@ import '../models/species/species_model.dart';
 import '../providers/game_provider.dart';
 import '../utils/constants/colors.dart';
 import '../utils/constants/dimensions.dart';
+import '../utils/constants/game_enums.dart';
 import '../utils/constants/species_data.dart';
 import '../utils/constants/text_styles.dart';
 import '../widgets/ui/species_card_widget.dart';
@@ -29,7 +30,7 @@ class _SpeciesSelectionScreenState extends State<SpeciesSelectionScreen> {
     if (selectedSpeciesId != null) {
       final gameProvider = Provider.of<GameProvider>(context, listen: false);
       gameProvider.setSelectedSpecies(selectedSpeciesId!);
-      gameProvider.setGameState('tutorial');
+      gameProvider.setGameState(GameState.tutorial);
 
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const TutorialScreen()),
