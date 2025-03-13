@@ -8,6 +8,7 @@ import '../../widgets/game/game_sidebar_widget.dart';
 import '../../widgets/game/nest_view_widget.dart';
 import '../../widgets/ui/notification_widget.dart';
 import '../../widgets/game/pause_menu_widget.dart';
+import '../../utils/constants/colors.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -18,10 +19,22 @@ class GameScreen extends StatefulWidget {
 
 class _GameScreenState extends State<GameScreen> {
   bool _isPaused = false;
+  late _LifecycleObserver _lifecycleObserver;
 
   @override
   void initState() {
     super.initState();
+
+    // Initialisiere Lifecycle Observer
+    _lifecycleObserver = _LifecycleObserver(
+      onPause: () {
+        final servicesProvider = Provider.of<ServicesProvider>(
+          context,
+          listen: false,
+        );
+        servicesProvider.persistenceService.saveGame();
+      },
+    );
 
     // Initialisiere Services nach dem Build
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -38,13 +51,7 @@ class _GameScreenState extends State<GameScreen> {
       }
 
       // Auto-Save beim Verlassen der App (für Web nicht relevant)
-      WidgetsBinding.instance.addObserver(
-        _LifecycleObserver(
-          onPause: () {
-            servicesProvider.persistenceService.saveGame();
-          },
-        ),
-      );
+      WidgetsBinding.instance.addObserver(_lifecycleObserver);
     });
   }
 
