@@ -62,4 +62,3 @@ class TaskAllocation {
 
   int get total => foraging + building + caregiving + defense + exploration;
 }
-vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv

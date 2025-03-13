@@ -32,14 +32,20 @@ class TunnelWidget extends StatelessWidget {
     final adjustedHeight = height > 0 ? height : AppDimensions.tunnelWidth;
 
     return Positioned(
-      left: left,
-      top: top,
-      width: adjustedWidth,
-      height: adjustedHeight,
+      left: left.toDouble(),
+      top: top.toDouble(),
+      width: adjustedWidth.toDouble(),
+      height: adjustedHeight.toDouble(),
       child: CustomPaint(
         painter: TunnelPainter(
-          start: fromChamber.position - Offset(left, top),
-          end: toChamber.position - Offset(left, top),
+          start: Offset(
+            fromChamber.position.x.toDouble() - left.toDouble(),
+            fromChamber.position.y.toDouble() - top.toDouble(),
+          ),
+          end: Offset(
+            toChamber.position.x.toDouble() - left.toDouble(),
+            toChamber.position.y.toDouble() - top.toDouble(),
+          ),
         ),
       ),
     );

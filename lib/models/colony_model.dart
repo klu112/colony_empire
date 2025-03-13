@@ -1,3 +1,5 @@
+import 'dart:math';
+import 'dart:ui';
 import 'package:colony_empire/models/ant/ant_model.dart';
 import 'package:colony_empire/models/chamber/chamber_model.dart';
 import 'package:colony_empire/models/chamber/tunnel_model.dart';

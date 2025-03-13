@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 /// Repräsentiert eine einzelne Ameise im Spiel

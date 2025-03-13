@@ -23,8 +23,8 @@ class ChamberWidget extends StatelessWidget {
     final borderWidth = isSelected ? 3.0 : 1.0;
 
     return Positioned(
-      left: chamber.position.x - 20 * chamber.size,
-      top: chamber.position.y - 20 * chamber.size,
+      left: chamber.position.x - 20.0 * chamber.size,
+      top: chamber.position.y - 20.0 * chamber.size,
       child: GestureDetector(
         onTap: onTap,
         child: Container(

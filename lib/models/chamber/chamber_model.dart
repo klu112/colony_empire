@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 /// Repräsentiert eine Kammer im Ameisennest
