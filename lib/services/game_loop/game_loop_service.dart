@@ -2,6 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/game_provider.dart';
+import '../../utils/constants/game_enums.dart';
+import 'ant_manager_service.dart';
+import 'resource_manager_service.dart';
 
 /// Service zur Verwaltung des Spielablaufs in festen Zeitintervallen
 class GameLoopService {
@@ -9,6 +12,11 @@ class GameLoopService {
   Timer? _gameLoopTimer;
   final int _normalTickMs = 500; // Normale Geschwindigkeit
   final int _fastTickMs = 200; // Beschleunigte Geschwindigkeit
+
+  // Unterservices
+  final AntManagerService _antManagerService = AntManagerService();
+  final ResourceManagerService _resourceManagerService =
+      ResourceManagerService();
 
   GameLoopService(this.context);
 
@@ -39,9 +47,9 @@ class GameLoopService {
   /// Verarbeitet einen einzelnen Tick des Spiels
   void _processTick() {
     final gameProvider = Provider.of<GameProvider>(context, listen: false);
-
     // Nur verarbeiten, wenn das Spiel läuft
-    if (gameProvider.gameState != 'playing' || gameProvider.speed == 0) {
+    if (gameProvider.gameState != GameState.playing ||
+        gameProvider.speed == 0) {
       stopGameLoop();
       return;
     }
@@ -49,11 +57,32 @@ class GameLoopService {
     // Zeit aktualisieren
     gameProvider.updateTime();
 
-    // Ameisen bewegen
-    gameProvider.updateAnts();
+    // Ressourcen aktualisieren mit ResourceManagerService
+    final updatedResources = _resourceManagerService.updateResources(
+      currentResources: gameProvider.resources,
+      taskAllocation: gameProvider.taskAllocation,
+      selectedSpeciesId: gameProvider.selectedSpeciesId,
+      time: gameProvider.time,
+    );
+    gameProvider.updateResourcesFromService(updatedResources);
 
-    // Ressourcen aktualisieren
-    gameProvider.updateResources();
+    // Ameisen aktualisieren mit AntManagerService
+    if (gameProvider.ants.isEmpty) {
+      // Initialisiere Ameisen, wenn noch keine vorhanden sind
+      final initialAnts = _antManagerService.initializeAnts(
+        gameProvider.chambers,
+        gameProvider.resources,
+      );
+      gameProvider.updateAntsFromService(initialAnts);
+    } else {
+      // Bewege vorhandene Ameisen
+      final updatedAnts = _antManagerService.updateAnts(
+        gameProvider.ants,
+        gameProvider.chambers,
+        gameProvider.taskAllocation,
+      );
+      gameProvider.updateAntsFromService(updatedAnts);
+    }
 
     // Zufällige Ereignisse (ca. alle 50 Ticks)
     if (gameProvider.time % 50 == 0 && gameProvider.time > 0) {

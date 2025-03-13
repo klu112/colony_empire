@@ -369,4 +369,16 @@ class GameProvider with ChangeNotifier {
       setNotification(randomEvent.message);
     }
   }
+
+  /// Aktualisiert Ressourcen von externem Service
+  void updateResourcesFromService(Resources updatedResources) {
+    _colony = _colony.copyWith(resources: updatedResources);
+    notifyListeners();
+  }
+
+  /// Aktualisiert Ameisen von externem Service
+  void updateAntsFromService(List<Ant> updatedAnts) {
+    _colony = _colony.copyWith(ants: updatedAnts);
+    notifyListeners();
+  }
 }
