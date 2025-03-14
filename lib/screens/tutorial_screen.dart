@@ -44,8 +44,20 @@ class _TutorialScreenState extends State<TutorialScreen> {
     }
   }
 
+  void _skipTutorial() {
+    final gameProvider = Provider.of<GameProvider>(context, listen: false);
+    gameProvider.setGameState(GameState.playing);
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (context) => const GameScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 600;
+
     return Scaffold(
       body: Stack(
         children: [
@@ -68,8 +80,12 @@ class _TutorialScreenState extends State<TutorialScreen> {
           // Tutorial-Dialog
           Center(
             child: Container(
-              width: MediaQuery.of(context).size.width * 0.5,
-              padding: const EdgeInsets.all(AppDimensions.l),
+              width:
+                  isSmallScreen
+                      ? size.width * 0.9
+                      : MediaQuery.of(context).size.width * 0.5,
+              constraints: BoxConstraints(maxWidth: 450),
+              padding: EdgeInsets.all(isSmallScreen ? 16 : AppDimensions.l),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
@@ -86,16 +102,25 @@ class _TutorialScreenState extends State<TutorialScreen> {
                 children: [
                   Text(
                     TutorialData.steps[_currentStep]['title']!,
-                    style: AppTextStyles.heading2,
+                    style:
+                        isSmallScreen
+                            ? TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            )
+                            : AppTextStyles.heading2,
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: AppDimensions.m),
+                  SizedBox(height: isSmallScreen ? 8 : AppDimensions.m),
                   Text(
                     TutorialData.steps[_currentStep]['content']!,
-                    style: AppTextStyles.bodyLarge,
+                    style:
+                        isSmallScreen
+                            ? TextStyle(fontSize: 14)
+                            : AppTextStyles.bodyLarge,
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: AppDimensions.l),
+                  SizedBox(height: isSmallScreen ? 16 : AppDimensions.l),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -105,21 +130,28 @@ class _TutorialScreenState extends State<TutorialScreen> {
                           child: const Text('Zurück'),
                         )
                       else
-                        const SizedBox(),
+                        const SizedBox(width: 1), // Platzhalter
+                      // Überspringen-Button
+                      TextButton(
+                        onPressed: _skipTutorial,
+                        child: const Text('Überspringen'),
+                      ),
+
                       ElevatedButton(
                         onPressed: _nextStep,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppDimensions.l,
-                            vertical: AppDimensions.m,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isSmallScreen ? 8 : 16,
+                            vertical: isSmallScreen ? 4 : 8,
                           ),
                         ),
                         child: Text(
                           _currentStep < TutorialData.steps.length - 1
                               ? 'Weiter'
                               : 'Spiel starten',
+                          style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
                         ),
                       ),
                     ],

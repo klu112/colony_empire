@@ -20,7 +20,6 @@ class GameLoopService {
 
   GameLoopService(this.context);
 
-  /// Startet den Game Loop
   void startGameLoop() {
     final gameProvider = Provider.of<GameProvider>(context, listen: false);
 
@@ -29,6 +28,9 @@ class GameLoopService {
 
     // Wenn Geschwindigkeit auf 0 (Pause), nicht starten
     if (gameProvider.speed == 0) return;
+
+    // Debug-Ausgabe hinzufügen
+    print('Starting game loop with speed: ${gameProvider.speed}');
 
     // Timer-Intervall basierend auf Geschwindigkeit
     final tickMs = gameProvider.speed == 1 ? _normalTickMs : _fastTickMs;
@@ -92,6 +94,7 @@ class GameLoopService {
 
   /// Geschwindigkeit ändern und Loop neu starten
   void setSpeed(int speed) {
+    print('Setting game speed to: $speed');
     final gameProvider = Provider.of<GameProvider>(context, listen: false);
     gameProvider.setSpeed(speed);
 

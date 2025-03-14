@@ -27,19 +27,11 @@ class _GameScreenState extends State<GameScreen> {
   void initState() {
     super.initState();
 
-    // Initialisiere Lifecycle Observer
-    _lifecycleObserver = _LifecycleObserver(
-      onPause: () {
-        final servicesProvider = Provider.of<ServicesProvider>(
-          context,
-          listen: false,
-        );
-        servicesProvider.persistenceService.saveGame();
-      },
-    );
+    print('GameScreen: initState');
 
     // Initialisiere Services nach dem Build
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      print('GameScreen: PostFrameCallback');
       final servicesProvider = Provider.of<ServicesProvider>(
         context,
         listen: false,
@@ -49,11 +41,9 @@ class _GameScreenState extends State<GameScreen> {
       // Starte Game Loop, wenn nicht pausiert
       final gameProvider = Provider.of<GameProvider>(context, listen: false);
       if (gameProvider.speed > 0) {
+        print('Starting game loop with speed: ${gameProvider.speed}');
         servicesProvider.gameLoopService.startGameLoop();
       }
-
-      // Auto-Save beim Verlassen der App (für Web nicht relevant)
-      WidgetsBinding.instance.addObserver(_lifecycleObserver);
     });
   }
 
@@ -193,19 +183,15 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   void dispose() {
+    print('GameScreen: dispose');
     // Stoppe Game Loop beim Verlassen des Screens
-    final servicesProvider = Provider.of<ServicesProvider>(
-      context,
-      listen: false,
-    );
-    servicesProvider.gameLoopService.stopGameLoop();
-
-    // Speichere Spielstand beim Verlassen
-    servicesProvider.persistenceService.saveGame();
-
-    // Bereinige Lifecycle Observer
-    WidgetsBinding.instance.removeObserver(_lifecycleObserver);
-
+    if (mounted) {
+      final servicesProvider = Provider.of<ServicesProvider>(
+        context,
+        listen: false,
+      );
+      servicesProvider.gameLoopService.stopGameLoop();
+    }
     super.dispose();
   }
 }

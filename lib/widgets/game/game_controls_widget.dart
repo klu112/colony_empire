@@ -63,7 +63,10 @@ class GameControlsWidget extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () => servicesProvider.setGameSpeed(speed),
+        onTap: () {
+          print('Speed button tapped: $speed');
+          servicesProvider.setGameSpeed(speed);
+        },
         borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
         child: Container(
           padding: const EdgeInsets.all(AppDimensions.s),

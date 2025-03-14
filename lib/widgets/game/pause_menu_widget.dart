@@ -16,12 +16,19 @@ class PauseMenuWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 600;
+
     return Container(
       color: Colors.black.withOpacity(0.7),
       child: Center(
         child: Container(
-          width: MediaQuery.of(context).size.width * 0.3,
-          padding: const EdgeInsets.all(AppDimensions.l),
+          width:
+              isSmallScreen
+                  ? size.width * 0.8
+                  : MediaQuery.of(context).size.width * 0.3,
+          constraints: BoxConstraints(maxWidth: 350),
+          padding: EdgeInsets.all(isSmallScreen ? 16 : AppDimensions.l),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
@@ -38,39 +45,32 @@ class PauseMenuWidget extends StatelessWidget {
             children: [
               Text(
                 'Spiel pausiert',
-                style: AppTextStyles.heading2,
+                style:
+                    isSmallScreen
+                        ? TextStyle(fontSize: 20, fontWeight: FontWeight.bold)
+                        : AppTextStyles.heading2,
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: AppDimensions.l),
+              SizedBox(height: isSmallScreen ? 16 : AppDimensions.l),
               _buildButton(
                 context: context,
                 text: 'Fortsetzen',
                 icon: Icons.play_arrow,
                 onPressed: () => _resumeGame(context),
               ),
-              const SizedBox(height: AppDimensions.m),
+              SizedBox(height: isSmallScreen ? 8 : AppDimensions.s),
               _buildButton(
                 context: context,
                 text: 'Speichern',
                 icon: Icons.save,
                 onPressed: () => _saveGame(context),
               ),
-              const SizedBox(height: AppDimensions.m),
+              SizedBox(height: isSmallScreen ? 8 : AppDimensions.s),
               _buildButton(
                 context: context,
-                text: 'Zurück zum Hauptmenü',
+                text: 'Zum Hauptmenü',
                 icon: Icons.home,
                 onPressed: () => _exitToMainMenu(context),
-              ),
-              _buildButton(
-                context: context,
-                text: 'Spielhilfe',
-                icon: Icons.help_outline,
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => const HelpScreen()),
-                  );
-                },
               ),
             ],
           ),
@@ -85,17 +85,24 @@ class PauseMenuWidget extends StatelessWidget {
     required IconData icon,
     required VoidCallback onPressed,
   }) {
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 600;
+
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icon),
-        label: Text(text),
+        onPressed: () {
+          print('Pause menu button tapped: $text');
+          onPressed();
+        },
+        icon: Icon(icon, size: isSmallScreen ? 18 : 22),
+        label: Text(text, style: TextStyle(fontSize: isSmallScreen ? 14 : 16)),
         style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppDimensions.l,
-            vertical: AppDimensions.m,
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 8 : AppDimensions.m,
+            vertical: isSmallScreen ? 8 : AppDimensions.s,
           ),
+          minimumSize: Size(0, isSmallScreen ? 36 : 44),
         ),
       ),
     );
