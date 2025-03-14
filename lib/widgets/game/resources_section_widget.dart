@@ -7,7 +7,7 @@ import '../resources/resource_bar_widget.dart';
 
 class ResourcesSectionWidget extends StatelessWidget {
   const ResourcesSectionWidget({super.key});
-  final Map<String, double> previousValues = {};
+  static final Map<String, double> previousValues = {};
 
   @override
   Widget build(BuildContext context) {
