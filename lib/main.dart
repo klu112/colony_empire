@@ -16,8 +16,24 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => GameProvider()),
+        // Wichtig: ServicesProvider muss vor GameProvider kommen
         ChangeNotifierProvider(create: (_) => ServicesProvider()),
+        ChangeNotifierProvider(create: (_) => GameProvider()),
+        // Verbindung zwischen den Providern herstellen
+        ProxyProvider2<ServicesProvider, GameProvider, void>(
+          update: (_, servicesProvider, gameProvider, __) {
+            if (gameProvider != null && servicesProvider != null) {
+              // 1. GameProvider über ServicesProvider informieren
+              gameProvider.updateServicesProvider(servicesProvider);
+              // 2. Initialisiere ServicesProvider wenn nötig
+              if (!servicesProvider.initialized &&
+                  !servicesProvider.initializing) {
+                servicesProvider.initialize(gameProvider);
+              }
+            }
+            return;
+          },
+        ),
       ],
       child: MaterialApp(
         title: 'Colony Empire',

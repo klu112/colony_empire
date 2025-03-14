@@ -36,7 +36,7 @@ class _GameScreenState extends State<GameScreen> {
         context,
         listen: false,
       );
-      servicesProvider.initialize(context);
+      servicesProvider.initialize(context as GameProvider);
 
       // Starte Game Loop, wenn nicht pausiert
       final gameProvider = Provider.of<GameProvider>(context, listen: false);
@@ -154,7 +154,12 @@ class _GameScreenState extends State<GameScreen> {
                   Positioned(
                     top: 0,
                     left: 0,
-                    right: 280, // Berücksichtige Seitenleiste
+                    // Use relative positioning instead of fixed pixels
+                    right:
+                        MediaQuery.of(context).size.width < 600
+                            ? 0
+                            : MediaQuery.of(context).size.width *
+                                0.25, // Responsive sidebar width
                     child: NotificationWidget(
                       message: gameProvider.notification!,
                       onDismiss: () => gameProvider.setNotification(null),

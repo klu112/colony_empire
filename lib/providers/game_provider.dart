@@ -10,10 +10,12 @@ import '../models/resources/task_allocation_model.dart';
 import '../services/events/event_service.dart';
 import '../utils/constants/game_enums.dart';
 import '../utils/constants/species_data.dart';
+import 'services_provider.dart';
 
 class GameProvider with ChangeNotifier {
   // Services
   final EventService _eventService = EventService();
+  ServicesProvider? _servicesProvider;
 
   // Spielzustände
   GameState _gameState = GameState.selection;
@@ -41,15 +43,25 @@ class GameProvider with ChangeNotifier {
   String? get notification => _notification;
 
   // Setter
+  @override
   void setGameState(GameState newState) {
+    print("Ändere GameState von $_gameState zu $newState");
     _gameState = newState;
+
+    // Wenn der Zustand auf Playing wechselt, starte den Game Loop
+    if (newState == GameState.playing &&
+        _servicesProvider != null &&
+        _servicesProvider!.initialized) {
+      print("Starte GameLoop wegen GameState-Änderung zu Playing");
+      _servicesProvider!.gameLoopService.setSpeed(_colony.speed);
+    }
+
     notifyListeners();
   }
 
   // Für Kompatibilität mit bisherigem Code
   void setGameStateFromString(String stateString) {
-    _gameState = GameStateExtension.fromString(stateString);
-    notifyListeners();
+    setGameState(GameStateExtension.fromString(stateString));
   }
 
   void setSelectedSpecies(String speciesId) {
@@ -60,6 +72,12 @@ class GameProvider with ChangeNotifier {
 
   void setSpeed(int newSpeed) {
     _colony = _colony.copyWith(speed: newSpeed);
+
+    // Geschwindigkeit auch im GameLoopService aktualisieren
+    if (_servicesProvider != null && _servicesProvider!.initialized) {
+      _servicesProvider!.setGameSpeed(newSpeed);
+    }
+
     notifyListeners();
   }
 
@@ -388,5 +406,24 @@ class GameProvider with ChangeNotifier {
     _gameState = GameState.playing;
     _selectedSpeciesId = savedColony.selectedSpeciesId;
     notifyListeners();
+  }
+
+  /// Aktualisiere den ServicesProvider
+  void updateServicesProvider(ServicesProvider servicesProvider) {
+    _servicesProvider = servicesProvider;
+
+    // Wenn Services noch nicht initialisiert sind, initialisieren wir sie nicht hier
+    if (!servicesProvider.initialized) {
+      print(
+        "ServicesProvider noch nicht initialisiert in updateServicesProvider",
+      );
+      return;
+    }
+
+    // Wenn der GameState bereits Playing ist, starte den GameLoop
+    if (_gameState == GameState.playing) {
+      print("Starte GameLoop weil GameState bereits auf Playing ist");
+      _servicesProvider!.gameLoopService.setSpeed(_colony.speed);
+    }
   }
 }

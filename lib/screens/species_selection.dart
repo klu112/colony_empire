@@ -60,7 +60,8 @@ class _SpeciesSelectionScreenState extends State<SpeciesSelectionScreen> {
 
     // Stelle sicher, dass Services initialisiert sind
     if (!servicesProvider.initialized) {
-      servicesProvider.initialize(context);
+      final gameProvider = Provider.of<GameProvider>(context, listen: false);
+      servicesProvider.initialize(gameProvider);
     }
 
     final hasSave = await servicesProvider.persistenceService.hasSavedGame();

@@ -59,13 +59,21 @@ class _NotificationWidgetState extends State<NotificationWidget>
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 600;
+
     return SlideTransition(
       position: _slideAnimation,
       child: FadeTransition(
         opacity: _opacityAnimation,
         child: Container(
-          margin: const EdgeInsets.all(AppDimensions.m),
-          padding: const EdgeInsets.all(AppDimensions.m),
+          width: double.infinity,
+          margin: EdgeInsets.all(
+            isSmallScreen ? AppDimensions.s : AppDimensions.m,
+          ),
+          padding: EdgeInsets.all(
+            isSmallScreen ? AppDimensions.s : AppDimensions.m,
+          ),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
@@ -83,11 +91,16 @@ class _NotificationWidgetState extends State<NotificationWidget>
               Row(
                 children: [
                   const Icon(Icons.info_outline, color: AppColors.primary),
-                  const SizedBox(width: AppDimensions.s),
+                  SizedBox(
+                    width: isSmallScreen ? AppDimensions.xs : AppDimensions.s,
+                  ),
                   Expanded(
                     child: Text(
                       widget.message,
-                      style: AppTextStyles.bodyMedium,
+                      style:
+                          isSmallScreen
+                              ? AppTextStyles.bodySmall
+                              : AppTextStyles.bodyMedium,
                     ),
                   ),
                   InkWell(
@@ -95,9 +108,13 @@ class _NotificationWidgetState extends State<NotificationWidget>
                     borderRadius: BorderRadius.circular(
                       AppDimensions.radiusSmall,
                     ),
-                    child: const Padding(
-                      padding: EdgeInsets.all(4.0),
-                      child: Icon(Icons.close, size: 20, color: Colors.grey),
+                    child: Padding(
+                      padding: EdgeInsets.all(isSmallScreen ? 2.0 : 4.0),
+                      child: Icon(
+                        Icons.close,
+                        size: isSmallScreen ? 16 : 20,
+                        color: Colors.grey,
+                      ),
                     ),
                   ),
                 ],
