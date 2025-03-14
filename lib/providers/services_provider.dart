@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/game_loop/game_loop_service.dart';
 import '../services/persistence/persistence_service.dart';
+import '../services/game_manager.dart'; // Add import for GameManager
 import 'game_provider.dart';
 
 /// Provider zur Verwaltung von Spielservices
 class ServicesProvider with ChangeNotifier {
   GameLoopService? _gameLoopService;
   PersistenceService? _persistenceService;
+  GameManager? _gameManager; // Add GameManager
   GameProvider? _gameProvider;
   bool _initialized = false;
   bool _initializing = false;
@@ -27,11 +29,21 @@ class ServicesProvider with ChangeNotifier {
     return _persistenceService!;
   }
 
+  GameManager get gameManager {
+    if (!_initialized) {
+      throw StateError('ServicesProvider wurde noch nicht initialisiert');
+    }
+    return _gameManager!;
+  }
+
   bool get initialized => _initialized;
   bool get initializing => _initializing;
 
   // Initialisiere Services
-  Future<void> initialize(GameProvider gameProvider) async {
+  Future<void> initialize(
+    GameProvider gameProvider, [
+    Size screenSize = const Size(800, 600),
+  ]) async {
     if (_initialized || _initializing) return;
 
     print('Initializing ServicesProvider...');
@@ -40,9 +52,17 @@ class ServicesProvider with ChangeNotifier {
     try {
       _gameProvider = gameProvider;
 
-      // Services initialisieren ohne Context - jetzt mit korrekten Konstruktoren
+      // GameManager initialisieren
+      _gameManager = GameManager(
+        gameProvider: gameProvider,
+        servicesProvider: this,
+      );
+      _gameManager!.initialize(screenSize: screenSize);
+
+      // Services initialisieren ohne Context
       _gameLoopService = GameLoopService();
-      _gameLoopService!.setGameProvider(gameProvider);
+      // Verwende die neue setProviders Methode anstelle von setGameProvider
+      _gameLoopService!.setProviders(gameProvider, _gameManager!);
 
       _persistenceService = PersistenceService();
       _persistenceService!.setGameProvider(gameProvider);

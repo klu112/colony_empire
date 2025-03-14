@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../providers/game_provider.dart';
 import '../../utils/constants/game_enums.dart';
+import '../game_manager.dart';
 import 'ant_manager_service.dart';
 import 'resource_manager_service.dart';
 
@@ -9,6 +10,7 @@ import 'resource_manager_service.dart';
 class GameLoopService {
   // Direkte Referenz zum GameProvider anstatt BuildContext
   GameProvider? _gameProvider;
+  GameManager? _gameManager;
   Timer? _gameLoopTimer;
   final int _normalTickMs = 500; // Normale Geschwindigkeit
   final int _fastTickMs = 200; // Beschleunigte Geschwindigkeit
@@ -16,16 +18,23 @@ class GameLoopService {
 
   // Unterservices
   final AntManagerService _antManagerService = AntManagerService();
-  final ResourceManagerService _resourceManagerService =
-      ResourceManagerService();
+  ResourceManagerService? _resourceManagerService;
 
   // Konstruktor ohne BuildContext
   GameLoopService();
 
-  // Methode zum Setzen des GameProviders
-  void setGameProvider(GameProvider provider) {
+  // Methode zum Setzen des GameProviders und GameManagers
+  void setProviders(GameProvider provider, GameManager manager) {
     _gameProvider = provider;
-    print('GameLoopService: GameProvider set');
+    _gameManager = manager;
+
+    // Jetzt können wir den ResourceManagerService korrekt initialisieren
+    _resourceManagerService = ResourceManagerService(
+      gameProvider: provider,
+      gameManager: manager,
+    );
+
+    print('GameLoopService: GameProvider and GameManager set');
   }
 
   void startGameLoop() {
@@ -42,8 +51,10 @@ class GameLoopService {
     }
 
     // GameProvider prüfen
-    if (_gameProvider == null) {
-      print('GameProvider is null, cannot start game loop');
+    if (_gameProvider == null || _resourceManagerService == null) {
+      print(
+        'GameProvider or ResourceManagerService is null, cannot start game loop',
+      );
       return;
     }
 
@@ -74,10 +85,13 @@ class GameLoopService {
 
   /// Verarbeitet einen einzelnen Tick des Spiels
   void _processTick() {
-    // Sicherer Zugriff auf GameProvider
+    // Sicherer Zugriff auf GameProvider und ResourceManagerService
     final gameProvider = _gameProvider;
-    if (gameProvider == null) {
-      print('GameProvider is null in processTick, stopping game loop');
+    final resourceManager = _resourceManagerService;
+    if (gameProvider == null || resourceManager == null) {
+      print(
+        'GameProvider or ResourceManagerService is null in processTick, stopping game loop',
+      );
       stopGameLoop();
       return;
     }
@@ -94,15 +108,7 @@ class GameLoopService {
       gameProvider.updateTime();
 
       // Ressourcen aktualisieren mit ResourceManagerService
-      final updatedResources = _resourceManagerService.updateResources(
-        currentResources: gameProvider.resources,
-        taskAllocation: gameProvider.taskAllocation,
-        selectedSpeciesId: gameProvider.selectedSpeciesId,
-        time: gameProvider.time,
-      );
-
-      // Update direkt im GameProvider durchführen
-      gameProvider.updateResourcesFromService(updatedResources);
+      resourceManager.updateResources();
 
       // Ameisen aktualisieren mit AntManagerService
       if (gameProvider.ants.isEmpty) {

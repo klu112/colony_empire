@@ -35,7 +35,7 @@ class AppColors {
   static const Color buildingMaterials = Color(0xFF8D6E63);
   static const Color water = Color(0xFF42A5F5);
   static const Color danger = Color(0xFFF44336);
-  
+
   // Aufgabenfarben
   static const Color foraging = Color(0xFF66BB6A);
   static const Color building = Color(0xFFFFB74D);
@@ -54,4 +54,6 @@ class AppColors {
     'waste': Color(0xFFBDBDBD),
     'defense': Color(0xFFEF9A9A),
   };
+  // andere Farben
+  static const Color amber = Color(0xFFFFC107);
 }

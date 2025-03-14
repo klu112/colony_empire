@@ -1,122 +1,137 @@
 import 'dart:math';
+import 'package:flutter/material.dart';
 import '../../models/resources/resources_model.dart';
-import '../../models/resources/task_allocation_model.dart';
+import '../../providers/game_provider.dart';
+import '../../services/game_manager.dart';
 
-/// Service zur Verwaltung von Spielressourcen
+/// Service zur Verwaltung und Aktualisierung von Ressourcen im Spielablauf
 class ResourceManagerService {
+  /// Der GameProvider für den Zugriff auf Spielressourcen
+  final GameProvider gameProvider;
+
+  /// Der GameManager für Zugriff auf zentrale Spielsysteme
+  final GameManager gameManager;
+
+  /// Zufallsgenerator für Ressourceneffekte
   final Random _random = Random();
 
-  /// Aktualisiere Ressourcen basierend auf Spielzustand
-  Resources updateResources({
-    required Resources currentResources,
-    required TaskAllocation taskAllocation,
-    required String? selectedSpeciesId,
-    required int time,
-  }) {
-    // Spezies-Bonus ermitteln
-    final foodBonus = selectedSpeciesId == 'atta' ? 1.5 : 1.0;
-    final reproductionBonus = selectedSpeciesId == 'solenopsis' ? 1.3 : 1.0;
+  /// Erstellt einen neuen ResourceManagerService
+  ResourceManagerService({
+    required this.gameProvider,
+    required this.gameManager,
+  });
 
-    // Ressourcenänderungen berechnen
-    final foodChange = calculateFoodChange(taskAllocation, foodBonus);
-    final materialChange = calculateMaterialChange(taskAllocation);
-    final waterChange = calculateWaterChange(taskAllocation);
+  /// Aktualisiert die Ressourcen basierend auf Spielzustand
+  void updateResources() {
+    // Die Grundregel-Updates vom GameProvider
+    gameProvider.updateResources();
 
-    // Populationsänderungen berechnen
-    final Map<String, int> newPopulation = Map.from(
-      currentResources.population,
-    );
+    // Zusätzliche komplexe Ressourcenberechnungen
+    calculateFoodConsumption();
+    calculateWaterConsumption();
+    calculateBuildingMaterialCollection();
 
-    // Alle 10 Ticks Chance auf Eierschlupf basierend auf Brutpflege
-    if (time % 10 == 0) {
-      processEggAndLarvaDevelopment(
-        newPopulation,
-        taskAllocation,
-        reproductionBonus,
-      );
+    // Überprüfe Kammerbauprozesse
+    gameManager.updateChamberConstructionProgress();
+  }
 
-      // Königin legt Eier basierend auf Nahrung
-      if (currentResources.food > 20 && time % 20 == 0) {
-        processEggLaying(newPopulation, reproductionBonus);
+  /// Aktualisiert die Nahrungsproduktion und -verbrauch
+  void calculateFoodConsumption() {
+    final resources = gameProvider.resources;
+    final taskAllocation = gameProvider.taskAllocation;
+
+    // Nahrung sammeln basierend auf Zuweisung
+    double foodCollected = 0.0;
+
+    // Arbeiterzuweisung für Nahrungssuche
+    final foragingPercentage = taskAllocation.foraging / 100.0;
+
+    // Anzahl der Arbeiter für Nahrungssuche
+    final foragingWorkers =
+        (gameProvider.resources.population['workers'] ?? 0) *
+        foragingPercentage;
+
+    // Nahrungsmenge basierend auf Arbeitern und Effizienz
+    // Hier war der Fehler: resources.calculateWorkEfficiency() könnte null sein
+    if (resources != null) {
+      final efficiency = resources.calculateWorkEfficiency();
+      foodCollected = foragingWorkers * 0.2 * efficiency;
+
+      // Umgebungseinflüsse (wie Jahreszeit, Wetter)
+      // Später könnte hier ein komplexeres Modell implementiert werden
+      final environmentFactor = 0.8 + (_random.nextDouble() * 0.4); // 0.8-1.2
+      foodCollected *= environmentFactor;
+
+      // Erfolgsrate bei der Nahrungssuche - manchmal gibt es Glückstreffer
+      if (_random.nextDouble() < 0.05) {
+        // 5% Chance
+        foodCollected *= 1.5; // 50% Bonus
       }
+
+      // Aktualisierte Ressourcen mit Verbrauch (über GameManager)
+      gameProvider.updateResourcesFromService(
+        resources.updateFoodConsumption(foodCollected),
+      );
     }
+  }
 
-    // Berechne Nahrungsverbrauch durch Bevölkerung
-    final foodConsumption = calculateFoodConsumption(newPopulation);
+  /// Berechnet den Wasserverbrauch und die -sammlung
+  void calculateWaterConsumption() {
+    final resources = gameProvider.resources;
+    final population = resources.population;
 
-    // Aktualisiere Ressourcen
-    return currentResources.copyWith(
-      food: (currentResources.food + foodChange - foodConsumption).clamp(
-        0.0,
-        100.0,
-      ),
-      buildingMaterials: (currentResources.buildingMaterials + materialChange)
-          .clamp(0.0, 100.0),
-      water: (currentResources.water + waterChange - 0.1).clamp(0.0, 100.0),
-      population: newPopulation,
+    // Basisverbrauch pro Ameise
+    final baseConsumption = 0.01;
+
+    // Gesamtverbrauch basierend auf Population
+    double totalConsumption = 0.0;
+    population.forEach((type, count) {
+      // Verschiedene Kasten haben unterschiedlichen Bedarf
+      double multiplier = 1.0;
+      if (type == 'queens') multiplier = 2.0;
+      if (type == 'soldiers') multiplier = 1.2;
+      if (type == 'larvae') multiplier = 0.5;
+
+      totalConsumption += count * baseConsumption * multiplier;
+    });
+
+    // Wassersammlung basierend auf Nahrungssuche-Aufgabe
+    final waterCollection =
+        (gameProvider.taskAllocation.foraging / 100.0) * 0.3;
+
+    // Nettoänderung berechnen
+    final netWaterChange = waterCollection - totalConsumption;
+
+    // Aktualisiere Wasser (maximal 100, minimal 0)
+    final newWaterLevel = (resources.water + netWaterChange).clamp(0.0, 100.0);
+
+    // Aktualisierte Ressourcen
+    gameProvider.updateResourcesFromService(
+      resources.copyWith(water: newWaterLevel),
     );
   }
 
-  /// Berechne Nahrungsänderung
-  double calculateFoodChange(
-    TaskAllocation taskAllocation,
-    double speciesBonus,
-  ) {
-    return taskAllocation.foraging / 25 * speciesBonus;
-  }
+  /// Berechnet die Sammlung von Baumaterialien
+  void calculateBuildingMaterialCollection() {
+    final resources = gameProvider.resources;
 
-  /// Berechne Änderung der Baumaterialien
-  double calculateMaterialChange(TaskAllocation taskAllocation) {
-    return taskAllocation.building / 40;
-  }
+    // Arbeiter, die Baumaterialien sammeln basierend auf Aufgabenzuweisung
+    final builderPercentage = gameProvider.taskAllocation.building / 100.0;
+    final builders = (resources.population['workers'] ?? 0) * builderPercentage;
 
-  /// Berechne Wasseränderung
-  double calculateWaterChange(TaskAllocation taskAllocation) {
-    return taskAllocation.foraging / 50;
-  }
+    // Materialgewinnung pro Tick basierend auf Arbeiterzahl
+    double materialsCollected = builders * 0.15;
 
-  /// Verarbeite Ei- und Larvenentwicklung
-  void processEggAndLarvaDevelopment(
-    Map<String, int> population,
-    TaskAllocation taskAllocation,
-    double reproductionBonus,
-  ) {
-    final hatchChance = taskAllocation.caregiving / 100 * reproductionBonus;
+    // Effizienzmultiplikator
+    materialsCollected *= resources.calculateWorkEfficiency();
 
-    // Eier zu Larven
-    if (_random.nextDouble() < hatchChance && population['eggs']! > 0) {
-      population['eggs'] = population['eggs']! - 1;
-      population['larvae'] = population['larvae']! + 1;
-    }
+    // Aktualisiere Baumaterialien (maximal 100)
+    final newMaterials = (resources.buildingMaterials + materialsCollected)
+        .clamp(0.0, 100.0);
 
-    // Larven zu Arbeiterinnen
-    if (_random.nextDouble() < hatchChance && population['larvae']! > 0) {
-      population['larvae'] = population['larvae']! - 1;
-      population['workers'] = population['workers']! + 1;
-    }
-  }
-
-  /// Verarbeite Eiablage durch Königin
-  void processEggLaying(Map<String, int> population, double reproductionBonus) {
-    final baseEggs = 1;
-    final bonusEggs = reproductionBonus > 1.0 ? 1 : 0;
-
-    population['eggs'] = population['eggs']! + baseEggs + bonusEggs;
-  }
-
-  /// Berechne Nahrungsverbrauch der Kolonie
-  double calculateFoodConsumption(Map<String, int> population) {
-    // Basisverbrauch pro Ameisentyp
-    final workerConsumption = 0.05 * population['workers']!;
-    final soldierConsumption = 0.1 * (population['soldiers'] ?? 0);
-    final scoutConsumption = 0.05 * (population['scouts'] ?? 0);
-    final queenConsumption = 0.2 * population['queen']!;
-    final larvaeConsumption = 0.03 * population['larvae']!;
-
-    return workerConsumption +
-        soldierConsumption +
-        scoutConsumption +
-        queenConsumption +
-        larvaeConsumption;
+    // Aktualisierte Ressourcen
+    gameProvider.updateResourcesFromService(
+      resources.copyWith(buildingMaterials: newMaterials),
+    );
   }
 }

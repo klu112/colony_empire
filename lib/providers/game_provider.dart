@@ -28,6 +28,17 @@ class GameProvider with ChangeNotifier {
   int? _selectedChamberId;
   String? _notification;
 
+  // Neue Variablen für das Aufgabensystem
+  /// Map zur Verfolgung der Anzahl von Ameisen pro Aufgabe
+  final Map<String, int> _antsPerTask = {
+    'foraging': 0,
+    'building': 0,
+    'caregiving': 0,
+    'defense': 0,
+    'exploration': 0,
+    'unassigned': 0, // Neue Kategorie: Nicht zugewiesene Ameisen
+  };
+
   // Getter
   GameState get gameState => _gameState;
   String? get selectedSpeciesId => _selectedSpeciesId;
@@ -42,8 +53,19 @@ class GameProvider with ChangeNotifier {
   int? get selectedChamberId => _selectedChamberId;
   String? get notification => _notification;
 
+  /// Getter für die Anzahl der Ameisen pro Aufgabe
+  Map<String, int> get antsPerTask => Map.unmodifiable(_antsPerTask);
+
+  /// Anzahl nicht zugewiesener Ameisen
+  int get unassignedAnts => _antsPerTask['unassigned'] ?? 0;
+
+  /// Gesamtanzahl der Arbeiterameisen
+  int get totalWorkerAnts {
+    final workerCount = resources.population['workers'] ?? 0;
+    return workerCount;
+  }
+
   // Setter
-  @override
   void setGameState(GameState newState) {
     print("Ändere GameState von $_gameState zu $newState");
     _gameState = newState;
@@ -168,7 +190,192 @@ class GameProvider with ChangeNotifier {
       _colony = _colony.copyWith(taskAllocation: newAllocation);
     }
 
+    // Aktualisiere die tatsächlichen Ameisenzuweisungen entsprechend der neuen Prozentsätze
+    _redistributeAntsBasedOnTaskAllocation();
+
     notifyListeners();
+  }
+
+  /// Weist Ameisen basierend auf den Prozentangaben der TaskAllocation zu
+  void _redistributeAntsBasedOnTaskAllocation() {
+    final int totalWorkers = totalWorkerAnts;
+
+    // Berechne die Zielanzahl für jede Aufgabe
+    final Map<String, int> targetAntsPerTask = {
+      'foraging': (totalWorkers * taskAllocation.foraging / 100).round(),
+      'building': (totalWorkers * taskAllocation.building / 100).round(),
+      'caregiving': (totalWorkers * taskAllocation.caregiving / 100).round(),
+      'defense': (totalWorkers * taskAllocation.defense / 100).round(),
+      'exploration': (totalWorkers * taskAllocation.exploration / 100).round(),
+    };
+
+    // Finde Ameisen, die umverteilt werden müssen
+    final List<Ant> antsToRedistribute = [];
+    final List<Ant> newAnts = [];
+
+    // Aktualisiere die Ameisenobjekte
+    for (final ant in ants) {
+      if (ant.type != 'worker')
+        continue; // Ignoriere nicht-Arbeiter (z.B. Königin)
+
+      // Überprüfe, ob die Aufgabe der Ameise überzugewiesen ist
+      final String task = ant.task ?? 'unassigned';
+      if (task != 'unassigned' &&
+          (_antsPerTask[task]! > targetAntsPerTask[task]! ||
+              !targetAntsPerTask.containsKey(task))) {
+        antsToRedistribute.add(ant);
+      } else {
+        newAnts.add(ant);
+      }
+    }
+
+    // Unterbesetzung füllen
+    for (final taskEntry in targetAntsPerTask.entries) {
+      final String task = taskEntry.key;
+      final int targetCount = taskEntry.value;
+
+      // Zähle, wie viele Ameisen wir bereits für diese Aufgabe haben
+      int currentCount = newAnts.where((ant) => ant.task == task).length;
+
+      // Füge weitere Ameisen hinzu, bis wir die Zielanzahl erreichen
+      while (currentCount < targetCount && antsToRedistribute.isNotEmpty) {
+        final ant = antsToRedistribute.removeAt(0);
+        newAnts.add(ant.copyWith(task: task));
+        currentCount++;
+      }
+    }
+
+    // Verbleibende Ameisen als nicht zugewiesen markieren
+    for (final ant in antsToRedistribute) {
+      newAnts.add(ant.copyWith(task: 'unassigned'));
+    }
+
+    // Aktualisiere die Kolonie mit den neuen Ameisenzuweisungen
+    _colony = _colony.copyWith(ants: newAnts);
+
+    // Aktualisiere die Zähler für Ameisen pro Aufgabe
+    _updateAntsPerTaskCount();
+  }
+
+  /// Aktualisiert die Zähler für Ameisen pro Aufgabe
+  void _updateAntsPerTaskCount() {
+    // Zurücksetzen der Zähler
+    _antsPerTask.forEach((task, _) => _antsPerTask[task] = 0);
+
+    // Zählen der Ameisen pro Aufgabe
+    for (final ant in ants) {
+      if (ant.type != 'worker') continue;
+
+      final String task = ant.task ?? 'unassigned';
+      _antsPerTask[task] = (_antsPerTask[task] ?? 0) + 1;
+    }
+  }
+
+  /// Weist eine bestimmte Anzahl von Ameisen einer Aufgabe zu
+  /// Gibt die tatsächlich zugewiesene Anzahl zurück
+  int assignAntsToTask(String task, int count) {
+    if (!_antsPerTask.containsKey(task) || count <= 0) return 0;
+
+    // Überprüfe, wie viele nicht zugewiesene Ameisen verfügbar sind
+    final int available = _antsPerTask['unassigned'] ?? 0;
+    final int toAssign = min(count, available);
+
+    if (toAssign <= 0) return 0;
+
+    // Finde nicht zugewiesene Ameisen
+    final List<Ant> unassignedAnts =
+        ants
+            .where(
+              (ant) =>
+                  ant.type == 'worker' &&
+                  (ant.task == null || ant.task == 'unassigned'),
+            )
+            .toList();
+
+    if (unassignedAnts.isEmpty) return 0;
+
+    // Aktualisiere die Ameisenobjekte
+    final List<Ant> updatedAnts = List.of(ants);
+
+    for (int i = 0; i < min(toAssign, unassignedAnts.length); i++) {
+      final int antIndex = updatedAnts.indexOf(unassignedAnts[i]);
+      if (antIndex >= 0) {
+        updatedAnts[antIndex] = unassignedAnts[i].copyWith(task: task);
+      }
+    }
+
+    // Aktualisiere die Kolonie
+    _colony = _colony.copyWith(ants: updatedAnts);
+
+    // Aktualisiere die Zähler
+    _updateAntsPerTaskCount();
+
+    // Aktualisiere TaskAllocation entsprechend
+    _updateTaskAllocationFromAntCounts();
+
+    notifyListeners();
+    return toAssign;
+  }
+
+  /// Entfernt eine bestimmte Anzahl von Ameisen von einer Aufgabe
+  /// Gibt die tatsächlich entfernte Anzahl zurück
+  int unassignAntsFromTask(String task, int count) {
+    if (!_antsPerTask.containsKey(task) || count <= 0) return 0;
+
+    // Überprüfe, wie viele Ameisen dieser Aufgabe zugewiesen sind
+    final int assigned = _antsPerTask[task] ?? 0;
+    final int toUnassign = min(count, assigned);
+
+    if (toUnassign <= 0) return 0;
+
+    // Finde Ameisen, die dieser Aufgabe zugewiesen sind
+    final List<Ant> taskAnts =
+        ants.where((ant) => ant.type == 'worker' && ant.task == task).toList();
+
+    if (taskAnts.isEmpty) return 0;
+
+    // Aktualisiere die Ameisenobjekte
+    final List<Ant> updatedAnts = List.of(ants);
+
+    for (int i = 0; i < min(toUnassign, taskAnts.length); i++) {
+      final int antIndex = updatedAnts.indexOf(taskAnts[i]);
+      if (antIndex >= 0) {
+        updatedAnts[antIndex] = taskAnts[i].copyWith(task: 'unassigned');
+      }
+    }
+
+    // Aktualisiere die Kolonie
+    _colony = _colony.copyWith(ants: updatedAnts);
+
+    // Aktualisiere die Zähler
+    _updateAntsPerTaskCount();
+
+    // Aktualisiere TaskAllocation entsprechend
+    _updateTaskAllocationFromAntCounts();
+
+    notifyListeners();
+    return toUnassign;
+  }
+
+  /// Aktualisiert die TaskAllocation basierend auf den tatsächlichen Ameisenzahlen
+  void _updateTaskAllocationFromAntCounts() {
+    final int totalWorkers = totalWorkerAnts;
+    if (totalWorkers <= 0) return;
+
+    // Berechne die Prozentwerte basierend auf den tatsächlichen Zahlen
+    final TaskAllocation newAllocation = TaskAllocation(
+      foraging:
+          (((_antsPerTask['foraging'] ?? 0) / totalWorkers) * 100).round(),
+      building:
+          (((_antsPerTask['building'] ?? 0) / totalWorkers) * 100).round(),
+      caregiving:
+          (((_antsPerTask['caregiving'] ?? 0) / totalWorkers) * 100).round(),
+      defense: (((_antsPerTask['defense'] ?? 0) / totalWorkers) * 100).round(),
+      exploration:
+          (((_antsPerTask['exploration'] ?? 0) / totalWorkers) * 100).round(),
+    );
+
+    _colony = _colony.copyWith(taskAllocation: newAllocation);
   }
 
   // Neue Kammer hinzufügen
@@ -241,6 +448,9 @@ class GameProvider with ChangeNotifier {
       if (Random().nextDouble() < hatchChance && newPopulation['larvae']! > 0) {
         newPopulation['larvae'] = newPopulation['larvae']! - 1;
         newPopulation['workers'] = newPopulation['workers']! + 1;
+
+        // Neue Ameise als nicht zugewiesen markieren
+        _antsPerTask['unassigned'] = (_antsPerTask['unassigned'] ?? 0) + 1;
       }
 
       // Königin legt Eier basierend auf Nahrung
@@ -267,7 +477,51 @@ class GameProvider with ChangeNotifier {
     );
 
     _colony = _colony.copyWith(resources: newResources);
+
+    // Wenn sich die Anzahl der Arbeiter geändert hat, stelle sicher,
+    // dass die Aufgabenverteilung aktualisiert wird
+    if (newPopulation['workers'] != resources.population['workers']) {
+      _initializeNewAnts(
+        newPopulation['workers']! - resources.population['workers']!,
+      );
+    }
+
     notifyListeners();
+  }
+
+  /// Initialisiert neue Ameisen und fügt sie zum unassigned Pool hinzu
+  void _initializeNewAnts(int count) {
+    if (count <= 0) return;
+
+    // Erstelle neue Ameisen
+    final List<Ant> newAnts = List.of(ants);
+    final int startId =
+        newAnts.isNotEmpty ? newAnts.map((a) => a.id).reduce(max) + 1 : 1;
+
+    for (int i = 0; i < count; i++) {
+      // Zufällige Position in einer zufälligen Kammer
+      final targetChamber = chambers[Random().nextInt(chambers.length)];
+
+      newAnts.add(
+        Ant(
+          id: startId + i,
+          type: 'worker',
+          position: Point(
+            targetChamber.position.x + (Random().nextDouble() * 20 - 10),
+            targetChamber.position.y + (Random().nextDouble() * 20 - 10),
+          ),
+          target: targetChamber.position,
+          task: 'unassigned', // Neue Ameisen starten als nicht zugewiesen
+          chamberID: targetChamber.id,
+        ),
+      );
+    }
+
+    // Aktualisiere die Kolonie
+    _colony = _colony.copyWith(ants: newAnts);
+
+    // Aktualisiere die Zähler
+    _updateAntsPerTaskCount();
   }
 
   // Ameisen bewegen
@@ -337,14 +591,24 @@ class GameProvider with ChangeNotifier {
     // Initialen Arbeiterinnen hinzufügen
     for (int i = 0; i < resources.population['workers']!; i++) {
       final targetChamber = chambers[Random().nextInt(chambers.length)];
-      final taskList = [
-        'foraging',
-        'building',
-        'caregiving',
-        'defense',
-        'exploration',
-      ];
-      final randomTask = taskList[Random().nextInt(taskList.length)];
+
+      // Zufällige Aufgabe zuweisen (oder unassigned lassen)
+      String? taskAssignment;
+      final assignChance = Random().nextDouble();
+
+      if (assignChance < 0.7) {
+        // 70% Chance auf eine Aufgabe
+        final tasks = [
+          'foraging',
+          'building',
+          'caregiving',
+          'defense',
+          'exploration',
+        ];
+        taskAssignment = tasks[Random().nextInt(tasks.length)];
+      } else {
+        taskAssignment = 'unassigned'; // 30% Chance, nicht zugewiesen zu sein
+      }
 
       initialAnts.add(
         Ant(
@@ -352,13 +616,20 @@ class GameProvider with ChangeNotifier {
           type: 'worker',
           position: chambers[0].position,
           target: targetChamber.position,
-          task: randomTask,
+          task: taskAssignment,
           chamberID: Random().nextInt(chambers.length) + 1,
         ),
       );
     }
 
     _colony = _colony.copyWith(ants: initialAnts);
+
+    // Aktualisiere die antsPerTask Map
+    _updateAntsPerTaskCount();
+
+    // Aktualisiere die TaskAllocation based on initial assignments
+    _updateTaskAllocationFromAntCounts();
+
     notifyListeners();
   }
 
@@ -397,6 +668,10 @@ class GameProvider with ChangeNotifier {
   /// Aktualisiert Ameisen von externem Service
   void updateAntsFromService(List<Ant> updatedAnts) {
     _colony = _colony.copyWith(ants: updatedAnts);
+
+    // Auch die Zähler aktualisieren
+    _updateAntsPerTaskCount();
+
     notifyListeners();
   }
 
@@ -405,6 +680,10 @@ class GameProvider with ChangeNotifier {
     _colony = savedColony;
     _gameState = GameState.playing;
     _selectedSpeciesId = savedColony.selectedSpeciesId;
+
+    // Zähler für Ameisen pro Aufgabe aktualisieren
+    _updateAntsPerTaskCount();
+
     notifyListeners();
   }
 
