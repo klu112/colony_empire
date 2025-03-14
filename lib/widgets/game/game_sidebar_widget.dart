@@ -9,6 +9,7 @@ import 'chambers_section_widget.dart';
 import 'population_section_widget.dart';
 import 'resources_section_widget.dart';
 import 'tasks_section_widget.dart';
+import 'task_assignment_panel_widget.dart'; // Add import for your new panel
 
 class GameSidebarWidget extends StatelessWidget {
   const GameSidebarWidget({super.key});
@@ -116,6 +117,9 @@ class GameSidebarWidget extends StatelessWidget {
 
                       // Kammerbau
                       ChambersSectionWidget(),
+
+                      // Add Task Assignment Panel
+                      TaskAssignmentPanelWidget(),
 
                       SizedBox(height: AppDimensions.l),
                     ],

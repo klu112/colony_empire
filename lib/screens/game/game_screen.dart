@@ -36,10 +36,12 @@ class _GameScreenState extends State<GameScreen> {
         context,
         listen: false,
       );
-      servicesProvider.initialize(context as GameProvider);
+      final gameProvider = Provider.of<GameProvider>(context, listen: false);
+      servicesProvider.initialize(
+        gameProvider,
+      ); // Fix: use gameProvider instead of casting context
 
       // Starte Game Loop, wenn nicht pausiert
-      final gameProvider = Provider.of<GameProvider>(context, listen: false);
       if (gameProvider.speed > 0) {
         print('Starting game loop with speed: ${gameProvider.speed}');
         servicesProvider.gameLoopService.startGameLoop();

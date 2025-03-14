@@ -7,112 +7,56 @@ import 'game_provider.dart';
 
 /// Provider zur Verwaltung von Spielservices
 class ServicesProvider with ChangeNotifier {
-  GameLoopService? _gameLoopService;
-  PersistenceService? _persistenceService;
-  GameManager? _gameManager; // Add GameManager
-  GameProvider? _gameProvider;
+  final GameLoopService gameLoopService = GameLoopService();
+  final PersistenceService persistenceService = PersistenceService();
+  GameManager? _gameManager;
   bool _initialized = false;
   bool _initializing = false;
 
-  // Getter
-  GameLoopService get gameLoopService {
-    if (!_initialized) {
-      throw StateError('ServicesProvider wurde noch nicht initialisiert');
-    }
-    return _gameLoopService!;
-  }
-
-  PersistenceService get persistenceService {
-    if (!_initialized) {
-      throw StateError('ServicesProvider wurde noch nicht initialisiert');
-    }
-    return _persistenceService!;
-  }
-
-  GameManager get gameManager {
-    if (!_initialized) {
-      throw StateError('ServicesProvider wurde noch nicht initialisiert');
-    }
-    return _gameManager!;
-  }
-
   bool get initialized => _initialized;
   bool get initializing => _initializing;
+  GameManager? get gameManager => _gameManager;
 
   // Initialisiere Services
-  Future<void> initialize(
-    GameProvider gameProvider, [
-    Size screenSize = const Size(800, 600),
-  ]) async {
+  void initialize(GameProvider gameProvider) {
     if (_initialized || _initializing) return;
 
-    print('Initializing ServicesProvider...');
+    print('ServicesProvider: Initializing services...');
     _initializing = true;
 
     try {
-      _gameProvider = gameProvider;
-
       // GameManager initialisieren
       _gameManager = GameManager(
         gameProvider: gameProvider,
         servicesProvider: this,
       );
-      _gameManager!.initialize(screenSize: screenSize);
 
-      // Services initialisieren ohne Context
-      _gameLoopService = GameLoopService();
-      // Verwende die neue setProviders Methode anstelle von setGameProvider
-      _gameLoopService!.setProviders(gameProvider, _gameManager!);
+      // GameLoopService mit Providern verbinden - Null sicher machen
+      if (_gameManager != null) {
+        gameLoopService.setProviders(gameProvider, _gameManager!);
+      } else {
+        print('Error: GameManager initialization failed');
+      }
 
-      _persistenceService = PersistenceService();
-      _persistenceService!.setGameProvider(gameProvider);
-
-      // Auto-Save aktivieren
-      _persistenceService?.enableAutoSave();
+      // PersistenceService mit GameProvider verbinden
+      persistenceService.initialize(gameProvider);
 
       _initialized = true;
-      _initializing = false;
-      print('ServicesProvider successfully initialized');
-      notifyListeners();
+      print('ServicesProvider: Services initialized successfully');
     } catch (e) {
-      print('Error initializing ServicesProvider: $e');
+      print('Error initializing services: $e');
+    } finally {
       _initializing = false;
-      throw e;
     }
+
+    notifyListeners();
   }
 
-  // Spielgeschwindigkeit ändern
+  // Setzt die Spielgeschwindigkeit
   void setGameSpeed(int speed) {
     if (_initialized) {
-      print("ServicesProvider: Setting game speed to $speed");
-      _gameLoopService?.setSpeed(speed);
-    } else {
-      print("Warning: Trying to set game speed before initialization");
+      gameLoopService.setSpeed(speed);
+      notifyListeners();
     }
-  }
-
-  // Starte den Game Loop manuell
-  void startGameLoop() {
-    if (_initialized) {
-      _gameLoopService?.startGameLoop();
-    } else {
-      print("Warning: Trying to start game loop before initialization");
-    }
-  }
-
-  // Stoppe den Game Loop manuell
-  void stopGameLoop() {
-    if (_initialized) {
-      _gameLoopService?.stopGameLoop();
-    }
-  }
-
-  // Services bereinigen
-  @override
-  void dispose() {
-    if (_initialized) {
-      _gameLoopService?.stopGameLoop();
-    }
-    super.dispose();
   }
 }

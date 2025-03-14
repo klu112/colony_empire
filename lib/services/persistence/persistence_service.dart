@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:colony_empire/utils/constants/game_enums.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../models/colony_model.dart';
 import '../../providers/game_provider.dart';
 import '../../providers/services_provider.dart';
@@ -8,6 +11,7 @@ import 'colony_repository.dart';
 
 /// Service zur Verwaltung der Spielpersistenz
 class PersistenceService {
+  static const String _saveFileName = 'colony_save.json';
   Timer? _autoSaveTimer;
   GameProvider? _gameProvider;
   final ColonyRepository _repository = ColonyRepository();
@@ -18,6 +22,12 @@ class PersistenceService {
   // GameProvider setzen für späteren Zugriff
   void setGameProvider(GameProvider provider) {
     _gameProvider = provider;
+  }
+
+  /// Initialisiert den PersistenceService mit einer GameProvider-Instanz
+  void initialize(GameProvider gameProvider) {
+    _gameProvider = gameProvider;
+    print('PersistenceService: Initialized with GameProvider');
   }
 
   // Auto-Save aktivieren
@@ -41,41 +51,93 @@ class PersistenceService {
   /// Speichere aktuellen Spielstand
   Future<bool> saveGame() async {
     if (_gameProvider == null) {
-      print('Cannot save: GameProvider is null');
+      print('PersistenceService: Cannot save game, GameProvider is null');
       return false;
     }
 
-    final colony = _gameProvider!.colony;
-    print('Saving game...');
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/$_saveFileName');
 
-    return await _repository.saveColony(colony);
+      // Aktuellen Koloniezustand serialisieren
+      final colonyJson = _gameProvider!.colony.toJson();
+      final gameStateJson = {
+        'colony': colonyJson,
+        'gameState': _gameProvider!.gameState.toString(),
+        'lastSaved': DateTime.now().toIso8601String(),
+      };
+
+      // In Datei schreiben
+      await file.writeAsString(jsonEncode(gameStateJson));
+      print('PersistenceService: Game saved successfully');
+      return true;
+    } catch (e) {
+      print('PersistenceService: Error saving game: $e');
+      return false;
+    }
   }
 
   /// Lade Spielstand
   Future<bool> loadGame() async {
     if (_gameProvider == null) {
-      print('Cannot load: GameProvider is null');
+      print('PersistenceService: Cannot load game, GameProvider is null');
       return false;
     }
 
-    print('Loading game...');
-    final loadedColony = await _repository.loadColony();
-    if (loadedColony != null) {
-      _gameProvider!.loadColony(loadedColony);
-      _gameProvider!.setGameState(GameState.playing);
-      return true;
-    }
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/$_saveFileName');
 
-    return false;
+      if (!await file.exists()) {
+        print('PersistenceService: No saved game found');
+        return false;
+      }
+
+      final jsonString = await file.readAsString();
+      final gameStateJson = jsonDecode(jsonString);
+
+      // Kolonie aus JSON erstellen
+      final savedColony = Colony.fromJson(gameStateJson['colony']);
+
+      // In GameProvider laden
+      _gameProvider!.loadColony(savedColony);
+      _gameProvider!.setGameStateFromString(gameStateJson['gameState']);
+
+      print('PersistenceService: Game loaded successfully');
+      return true;
+    } catch (e) {
+      print('PersistenceService: Error loading game: $e');
+      return false;
+    }
   }
 
   /// Prüfe, ob ein Spielstand existiert
   Future<bool> hasSavedGame() async {
-    return await _repository.hasSavedColony();
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/$_saveFileName');
+      return await file.exists();
+    } catch (e) {
+      print('PersistenceService: Error checking for saved game: $e');
+      return false;
+    }
   }
 
   /// Lösche Spielstand
   Future<bool> deleteSave() async {
-    return await _repository.deleteColonySave();
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/$_saveFileName');
+
+      if (await file.exists()) {
+        await file.delete();
+        print('PersistenceService: Saved game deleted');
+      }
+
+      return true;
+    } catch (e) {
+      print('PersistenceService: Error deleting saved game: $e');
+      return false;
+    }
   }
 }

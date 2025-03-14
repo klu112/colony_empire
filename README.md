@@ -49,8 +49,8 @@ lib/
 - ✅ Phase 1: Einrichtung der Entwicklungsumgebung
 - ✅ Phase 2: Architektur und Design
 - ✅ Phase 3: Datenmodelle und State Management (In Arbeit)
-- 🔄 Phase 4: UI-Komponenten
-- ⬜ Phase 5: Spiellogik
+- ✅ Phase 4: UI-Komponenten
+- 🔄 Phase 5: Spiellogik
 - ⬜ Phase 6: Persistenz und Optimierung
 - ⬜ Phase 7: Testen und Polishing
 - ⬜ Phase 8: Deployment und Release
