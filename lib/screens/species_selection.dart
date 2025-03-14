@@ -11,6 +11,7 @@ import '../widgets/ui/species_card_widget.dart';
 import 'tutorial_screen.dart';
 import '../providers/services_provider.dart';
 import 'game/game_screen.dart';
+import '../widgets/ui/responsive_species_card_widget.dart';
 
 class SpeciesSelectionScreen extends StatefulWidget {
   const SpeciesSelectionScreen({super.key});
@@ -93,6 +94,10 @@ class _SpeciesSelectionScreenState extends State<SpeciesSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Bildschirmgrößen abrufen
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 600;
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -108,23 +113,32 @@ class _SpeciesSelectionScreenState extends State<SpeciesSelectionScreen> {
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(AppDimensions.l),
+            padding: EdgeInsets.all(isSmallScreen ? 12.0 : AppDimensions.l),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
+                Text(
                   'Colony Empire',
-                  style: AppTextStyles.heading1,
+                  style:
+                      isSmallScreen
+                          ? const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          )
+                          : AppTextStyles.heading1,
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: AppDimensions.s),
-                const Text(
+                SizedBox(height: isSmallScreen ? 8.0 : AppDimensions.s),
+                Text(
                   'Wähle deine Ameisenart und gründe eine florierende Kolonie!',
-                  style: AppTextStyles.bodyLarge,
+                  style:
+                      isSmallScreen
+                          ? const TextStyle(fontSize: 14)
+                          : AppTextStyles.bodyLarge,
                   textAlign: TextAlign.center,
                 ),
                 if (_hasSavedGame) ...[
-                  const SizedBox(height: AppDimensions.m),
+                  SizedBox(height: isSmallScreen ? 8.0 : AppDimensions.m),
                   ElevatedButton.icon(
                     onPressed: _loadGame,
                     icon: const Icon(Icons.play_arrow),
@@ -132,26 +146,25 @@ class _SpeciesSelectionScreenState extends State<SpeciesSelectionScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.secondary,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: AppDimensions.m,
+                      padding: EdgeInsets.symmetric(
+                        vertical: isSmallScreen ? 8.0 : AppDimensions.m,
                       ),
                     ),
                   ),
                 ],
-                const SizedBox(height: AppDimensions.m),
+                SizedBox(height: isSmallScreen ? 8.0 : AppDimensions.m),
                 Expanded(
                   child: GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: AppDimensions.m,
-                          mainAxisSpacing: AppDimensions.m,
-                          childAspectRatio: 0.8,
-                        ),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: isSmallScreen ? 2 : 3,
+                      crossAxisSpacing: isSmallScreen ? 8.0 : AppDimensions.m,
+                      mainAxisSpacing: isSmallScreen ? 8.0 : AppDimensions.m,
+                      childAspectRatio: isSmallScreen ? 0.7 : 0.9,
+                    ),
                     itemCount: SpeciesData.all.length,
                     itemBuilder: (context, index) {
                       final species = SpeciesData.all[index];
-                      return SpeciesCardWidget(
+                      return ResponsiveSpeciesCardWidget(
                         species: species,
                         isSelected: selectedSpeciesId == species.id,
                         onTap: () => _handleSpeciesSelect(species),
@@ -159,18 +172,18 @@ class _SpeciesSelectionScreenState extends State<SpeciesSelectionScreen> {
                     },
                   ),
                 ),
-                const SizedBox(height: AppDimensions.l),
+                SizedBox(height: isSmallScreen ? 12.0 : AppDimensions.l),
                 ElevatedButton(
                   onPressed: selectedSpeciesId != null ? _startGame : null,
                   style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppDimensions.m,
+                    padding: EdgeInsets.symmetric(
+                      vertical: isSmallScreen ? 12.0 : AppDimensions.m,
                     ),
                     disabledBackgroundColor: Colors.grey.shade300,
                   ),
-                  child: const Text(
+                  child: Text(
                     'Kolonie gründen',
-                    style: TextStyle(fontSize: 18),
+                    style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
                   ),
                 ),
               ],

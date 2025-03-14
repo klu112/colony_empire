@@ -9,6 +9,8 @@ import '../../widgets/game/nest_view_widget.dart';
 import '../../widgets/ui/notification_widget.dart';
 import '../../widgets/game/pause_menu_widget.dart';
 import '../../utils/constants/colors.dart';
+import '../../widgets/game/collapsible_sidebar_widget.dart';
+import '../../widgets/ui/settings_dialog.dart';
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -55,6 +57,7 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
+  // Ändere in der build-Methode die Seitenleiste
   @override
   Widget build(BuildContext context) {
     return Consumer<GameProvider>(
@@ -130,12 +133,29 @@ class _GameScreenState extends State<GameScreen> {
                               },
                             ),
                           ),
+
+                          Positioned(
+                            top: 16,
+                            right: 16 + 48, // Platz für den Pause-Button lassen
+                            child: FloatingActionButton(
+                              mini: true,
+                              backgroundColor: Colors.white.withOpacity(0.8),
+                              foregroundColor: AppColors.primary,
+                              child: const Icon(Icons.settings),
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => const SettingsDialog(),
+                                );
+                              },
+                            ),
+                          ),
                         ],
                       ),
                     ),
 
-                    // Seitenleiste
-                    const GameSidebarWidget(),
+                    // Klappbare Seitenleiste statt fester Sidebar
+                    const CollapsibleSidebarWidget(),
                   ],
                 ),
 

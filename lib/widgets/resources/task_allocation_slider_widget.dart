@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../utils/constants/colors.dart';
-import '../../utils/constants/text_styles.dart';
 
 class TaskAllocationSliderWidget extends StatelessWidget {
   final String taskName;
@@ -20,22 +19,36 @@ class TaskAllocationSliderWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isSmallScreen = MediaQuery.of(context).size.width < 600;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 4.0),
+          padding: const EdgeInsets.only(bottom: 2.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
-                  Text(icon, style: const TextStyle(fontSize: 16)),
-                  const SizedBox(width: 8),
-                  Text(taskName, style: AppTextStyles.label),
+                  Text(icon, style: const TextStyle(fontSize: 14)),
+                  const SizedBox(width: 4),
+                  Text(
+                    taskName,
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 12 : 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ],
               ),
-              Text('$value%', style: AppTextStyles.resourceValue),
+              Text(
+                '$value%',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 12 : 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         ),
@@ -45,6 +58,10 @@ class TaskAllocationSliderWidget extends StatelessWidget {
             inactiveTrackColor: color.withOpacity(0.2),
             thumbColor: color,
             overlayColor: color.withOpacity(0.2),
+            trackHeight: isSmallScreen ? 4.0 : 6.0,
+            thumbShape: RoundSliderThumbShape(
+              enabledThumbRadius: isSmallScreen ? 6.0 : 8.0,
+            ),
           ),
           child: Slider(
             value: value.toDouble(),

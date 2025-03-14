@@ -7,6 +7,7 @@ import '../../utils/constants/dimensions.dart';
 import '../../utils/constants/game_enums.dart';
 import '../../utils/constants/text_styles.dart';
 import '../../screens/species_selection.dart';
+import '../../screens/help_screen.dart';
 
 class PauseMenuWidget extends StatelessWidget {
   final VoidCallback? onResume;
@@ -60,6 +61,16 @@ class PauseMenuWidget extends StatelessWidget {
                 text: 'Zurück zum Hauptmenü',
                 icon: Icons.home,
                 onPressed: () => _exitToMainMenu(context),
+              ),
+              _buildButton(
+                context: context,
+                text: 'Spielhilfe',
+                icon: Icons.help_outline,
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => const HelpScreen()),
+                  );
+                },
               ),
             ],
           ),
